@@ -3,6 +3,8 @@
   "timeframes": ["15m", "1h", "4h"],
   "interval_minutes": 5,
   "heartbeat_hour": 8,
+  "monitor_url": "",
+  "monitor_secret": "",
   "strategy": {
     "rsi_period": 8,
     "oversold": 30,

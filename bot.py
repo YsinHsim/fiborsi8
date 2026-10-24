@@ -32,6 +32,34 @@ STATE_PATH = os.path.join(ROOT, "state.json")
 KLINES_URL = "https://data-api.binance.vision/api/v3/klines"
 
 
+def report_status(config, state, errors):
+    """POST bot status to the monitoring dashboard. Optional; silently skips
+    if monitor_url/monitor_secret are not set in config.json."""
+    url = config.get("monitor_url")
+    secret = config.get("monitor_secret")
+    if not url or not secret:
+        return
+    payload = {
+        "ts": int(time.time() * 1000),
+        "symbols": config["symbols"],
+        "timeframes": config["timeframes"],
+        "interval_minutes": config.get("interval_minutes", 5),
+        "alerted": state.get("alerted", {}),
+        "errors": errors[-20:],
+    }
+    try:
+        data = json.dumps(payload).encode()
+        req = urllib.request.Request(
+            url, data=data,
+            headers={"Content-Type": "application/json",
+                     "Authorization": f"Bearer {secret}"},
+        )
+        with urllib.request.urlopen(req, timeout=10):
+            pass
+    except Exception as e:
+        log(f"monitor report error: {e}")
+
+
 def log(msg):
     print(f"[{datetime.now():%Y-%m-%d %H:%M:%S}] {msg}", flush=True)
 
@@ -281,6 +309,7 @@ def run_once(config, dry_run=False):
     state = load_json(STATE_PATH, {"alerted": {}, "heartbeat_day": None})
     s = config["strategy"]
     limit = max(s["swing_lookback"], s["trend_sma"]) + s["rsi_period"] * 10
+    errors = []
 
     for symbol in config["symbols"]:
         for tf in config["timeframes"]:
@@ -290,6 +319,7 @@ def run_once(config, dry_run=False):
                 sig = check_signal(candles, s)
             except Exception as e:
                 log(f"{key} error: {e}")
+                errors.append(f"{key}: {e}")
                 continue
 
             if not sig:
@@ -327,6 +357,7 @@ def run_once(config, dry_run=False):
 
     if not dry_run:
         save_json(STATE_PATH, state)
+        report_status(config, state, errors)
 
 
 def main():
