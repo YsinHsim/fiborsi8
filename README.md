@@ -23,6 +23,8 @@ Checked on every **closed** candle, for every symbol and timeframe in `config.js
 
 Each signal is sent once per candle. All numbers are configurable in `config.json` under `strategy`.
 
+Alerts include a ready-made plan: entry (signal candle close), stop (swing low/high), a break-even instruction (move stop to entry after TP1), and take-profit levels at 1R, 2R and the swing target (levels beyond the swing target are dropped automatically). RSI and Fib values are included for confirmation.
+
 ## Step 1: Create the Telegram bot
 
 Telegram bots are free. You make one by chatting with **@BotFather**, Telegram's official bot for creating bots.

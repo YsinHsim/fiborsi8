@@ -66,8 +66,20 @@ def save_json(path, data):
 def http_get_json(url, params, timeout=15):
     full = f"{url}?{urllib.parse.urlencode(params)}"
     req = urllib.request.Request(full, headers={"User-Agent": "fiborsi8-bot"})
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        return json.load(resp)
+    last_err = None
+    # One retry: phones drop TLS connections often, and waiting a whole
+    # cycle for the next check is worse than waiting 3 seconds.
+    for attempt in range(2):
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                return json.load(resp)
+        except urllib.error.HTTPError:
+            raise  # server answered: 4xx/5xx, retrying won't help
+        except (urllib.error.URLError, TimeoutError, OSError) as e:
+            last_err = e
+            if attempt == 0:
+                time.sleep(3)
+    raise last_err
 
 
 # --- Market data -----------------------------------------------------------
@@ -231,14 +243,34 @@ def fmt_price(p):
 
 
 def format_signal(symbol, timeframe, sig, fib_level):
-    arrow = "🟢" if sig["side"] == "LONG" else "🔴"
+    side = sig["side"]
+    arrow = "🟢" if side == "LONG" else "🔴"
+    action = "BUY" if side == "LONG" else "SELL"
+    entry, stop, target = sig["price"], sig["stop"], sig["target"]
+    risk = abs(entry - stop)
+    if side == "LONG":
+        tp3_name, stop_name = "swing high", "swing low"
+        r_levels = [entry + risk, entry + 2 * risk]
+        tps = [t for t in r_levels if t < target] + [target]
+    else:
+        tp3_name, stop_name = "swing low", "swing high"
+        r_levels = [entry - risk, entry - 2 * risk]
+        tps = [t for t in r_levels if t > target] + [target]
+    p = fmt_price
+    tp_lines = "".join(
+        f"   TP{i + 1}: {p(t)} ({tp3_name if t == target else f'{i + 1}R'})\n"
+        for i, t in enumerate(tps)
+    )
     return (
-        f"{arrow} FiboRSI8 {sig['side']}  {symbol} {timeframe}\n"
-        f"Price: {fmt_price(sig['price'])}\n"
-        f"RSI(8): {sig['rsi']:.1f}\n"
-        f"Fib {fib_level * 100:.1f}%: {fmt_price(sig['fib_price'])}\n"
-        f"Ref stop (swing): {fmt_price(sig['stop'])}\n"
-        f"Ref target (swing): {fmt_price(sig['target'])}\n"
+        f"{arrow} FiboRSI8 {side}  {symbol} {timeframe}\n"
+        f"\n"
+        f"1. {action}: {p(entry)}\n"
+        f"2. Stop: {p(stop)} ({stop_name})\n"
+        f"3. Break even: after TP1 hits, move stop to {p(entry)}\n"
+        f"4. Take profits ({'buy back' if side == 'SHORT' else 'sell'} in parts):\n"
+        f"{tp_lines}"
+        f"\n"
+        f"RSI(8): {sig['rsi']:.1f} | Fib {fib_level * 100:.1f}%: {p(sig['fib_price'])}\n"
         f"Signal only, not advice. Check the chart first."
     )
 
