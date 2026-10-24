@@ -1,4 +1,4 @@
-#!/data/data/com.termux/files/usr/bin/bash
+#!/usr/bin/env bash
 # Start the bot in the background. Restarts it if it crashes.
 cd "$(dirname "$0")"
 
@@ -9,7 +9,7 @@ fi
 
 command -v termux-wake-lock >/dev/null && termux-wake-lock
 
-nohup bash -c 'while true; do python bot.py --loop; echo "bot exited, restarting in 30s"; sleep 30; done' \
+nohup bash -c 'while true; do python3 bot.py --loop; echo "bot exited, restarting in 30s"; sleep 30; done' \
   >> bot.log 2>&1 &
 echo $! > bot.pid
 echo "Started (pid $!). Logs: bot.log"

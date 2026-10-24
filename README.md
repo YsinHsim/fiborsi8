@@ -4,7 +4,11 @@ A small Telegram alert bot for the FiboRSI8 setup: Fibonacci retracement + RSI(8
 
 Alerts only. It never places trades. Signals are not financial advice, so check the chart before acting.
 
-Built to run 24/7 on an old Android phone with Termux. Python standard library only, no `pip install` needed.
+Python standard library only, no `pip install` needed. Runs on:
+
+- **Android phone** with Termux (good for an old backup phone running 24/7)
+- **Linux**: an old laptop (Linux Mint, Ubuntu, Debian) or a VPS
+- **macOS**, for testing
 
 ## Strategy rules
 
@@ -19,54 +23,100 @@ Checked on every **closed** candle, for every symbol and timeframe in `config.js
 
 Each signal is sent once per candle. All numbers are configurable in `config.json` under `strategy`.
 
-## Setup on the phone
+## Step 1: Create the Telegram bot
 
-### 1. Create the Telegram bot
+Telegram bots are free. You make one by chatting with **@BotFather**, Telegram's official bot for creating bots.
 
-1. In Telegram, message `@BotFather`, send `/newbot`, and copy the **token**.
-2. Send any message to your new bot.
-3. Open `https://api.telegram.org/bot<TOKEN>/getUpdates` in a browser and copy `"chat":{"id": ...}`. That number is your **chat_id**.
+1. Open Telegram and search for **@BotFather**. Pick the one with the blue verified tick; there are fakes.
+2. Press **Start**, then send `/newbot`.
+3. BotFather asks for a **name**. This is the display name, anything you like, for example `FiboRSI8 Alerts`.
+4. BotFather asks for a **username**. It must be unique and end in `bot`, for example `yasin_fiborsi8_bot`. If it's taken, try another.
+5. BotFather replies with a **token** that looks like `123456789:ABCdefGhIJKlmNoPQRstuVWxyz`. Copy it.
+6. Open your new bot (BotFather's reply has a `t.me/...` link) and press **Start**. The bot can only message you after you have messaged it first.
 
-### 2. Install the apps
-
-Install **Termux** and **Termux:Boot** from [F-Droid](https://f-droid.org/packages/com.termux/) or the [Termux GitHub releases](https://github.com/termux/termux-app/releases). Do not use the Play Store version of Termux, it is outdated.
-
-### 3. Install the bot
-
-In Termux:
+The installer asks for the token and finds your **chat_id** for you. To find it by hand instead:
 
 ```bash
-pkg install -y git
+TG_TOKEN=<your token> python3 bot.py --get-chat-id
+```
+
+Or open `https://api.telegram.org/bot<TOKEN>/getUpdates` in a browser and look for `"chat":{"id": ...}`.
+
+**Keep the token secret.** Anyone with it can control your bot. It is stored only in `.env`, which is gitignored. If it leaks, send `/revoke` to @BotFather to get a new one.
+
+Optional BotFather commands: `/setuserpic` (bot photo), `/setdescription`, `/mybots` (manage your bots).
+
+## Step 2: Install
+
+### Android (Termux)
+
+1. Install **Termux** and **Termux:Boot** from [F-Droid](https://f-droid.org/packages/com.termux/) or the [Termux GitHub releases](https://github.com/termux/termux-app/releases). Do not use the Play Store version of Termux, it is outdated.
+2. In Termux:
+
+   ```bash
+   pkg install -y git
+   git clone https://github.com/YsinHsim/fiborsi8.git
+   cd fiborsi8
+   ./install.sh
+   ```
+
+3. Stop Android from killing it:
+   - Open the **Termux:Boot** app once.
+   - Settings > Apps > Termux and Termux:Boot > Battery > **Unrestricted** (wording differs by brand).
+   - Allow **autostart** for both, and lock Termux in the recent apps screen.
+   - Brand-specific steps: [dontkillmyapp.com](https://dontkillmyapp.com).
+
+### Linux (laptop or VPS)
+
+```bash
+sudo apt install -y python3 git
 git clone https://github.com/YsinHsim/fiborsi8.git
 cd fiborsi8
 ./install.sh
 ```
 
-The installer asks for your token and chat_id, sends a test message, sets up auto-start on boot, and starts the bot.
+The installer adds a `@reboot` crontab entry so the bot starts after a reboot.
 
-### 4. Stop Android from killing it
+On a laptop, stop it sleeping when the lid closes: set `HandleLidSwitch=ignore` in `/etc/systemd/logind.conf`, then run `sudo systemctl restart systemd-logind`. Also turn off suspend in the power settings.
 
-- Open the **Termux:Boot** app once.
-- Settings > Apps > Termux and Termux:Boot > Battery > **Unrestricted** (wording differs by brand).
-- Allow **autostart** for both, and lock Termux in the recent apps screen.
-- Brand-specific steps: [dontkillmyapp.com](https://dontkillmyapp.com).
+On a VPS, crypto exchanges block US server IPs. Pick a Singapore region.
 
-The bot sends a daily "alive" message at `heartbeat_hour` (default 08:00). If it stops arriving, Android killed the bot.
+### macOS
+
+```bash
+git clone https://github.com/YsinHsim/fiborsi8.git
+cd fiborsi8
+./install.sh
+```
+
+No auto-start on macOS. Run `./start.sh` after a reboot, and the bot only runs while the Mac is awake.
+
+### What the installer does
+
+1. Installs Python and git (Termux only).
+2. Creates `config.json` from `config.example.json`.
+3. Asks for your bot token, finds your chat_id, and saves both to `.env`.
+4. Sets up auto-start (Termux:Boot on Android, crontab on Linux).
+5. Sends a test message to your Telegram.
+6. Starts the bot in the background.
 
 ## Commands
 
 ```bash
-./start.sh                # start in background (auto-restarts on crash)
-./stop.sh                 # stop
-./status.sh               # running? + last log lines
-python bot.py --dry-run   # check once, print signals, send nothing
-python bot.py --test      # send a Telegram test message
+./start.sh                  # start in background (auto-restarts on crash)
+./stop.sh                   # stop
+./status.sh                 # running? + last log lines
+python3 bot.py --dry-run    # check once, print signals, send nothing
+python3 bot.py --test       # send a Telegram test message
+python3 bot.py --get-chat-id  # list chat_ids that messaged the bot
 git pull && ./stop.sh && ./start.sh   # update to the latest version
 ```
 
+The bot sends a daily "alive" message at `heartbeat_hour` (default 08:00). If it stops arriving, the bot has stopped (on Android, usually the OS killed it).
+
 ## Configuration
 
-Edit `config.json` (created from `config.example.json` on install), then restart with `./stop.sh && ./start.sh`.
+Edit `config.json`, then restart with `./stop.sh && ./start.sh`.
 
 | Key | Default | Meaning |
 |---|---|---|

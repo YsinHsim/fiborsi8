@@ -11,6 +11,7 @@ Usage:
     python bot.py --loop     check every `interval_minutes` forever
     python bot.py --dry-run  check once, print signals, send nothing
     python bot.py --test     send a test Telegram message
+    python bot.py --get-chat-id  list chat_ids that messaged the bot
 """
 
 import argparse
@@ -18,6 +19,7 @@ import json
 import os
 import sys
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import datetime
@@ -203,6 +205,27 @@ def send_telegram(text):
         raise RuntimeError(f"Telegram error: {body}")
 
 
+def get_chat_ids(token):
+    """Return {chat_id: name} for chats that recently messaged the bot."""
+    url = f"https://api.telegram.org/bot{token}/getUpdates"
+    try:
+        body = http_get_json(url, {})
+    except urllib.error.HTTPError as e:
+        if e.code in (401, 404):
+            raise RuntimeError("Telegram rejected the token. Copy it again from @BotFather.")
+        raise
+    chats = {}
+    for update in body.get("result", []):
+        msg = update.get("message") or update.get("channel_post") or {}
+        chat = msg.get("chat")
+        if chat:
+            name = chat.get("title") or " ".join(
+                filter(None, [chat.get("first_name"), chat.get("last_name")])
+            ) or chat.get("username", "")
+            chats[str(chat["id"])] = name
+    return chats
+
+
 def fmt_price(p):
     return f"{p:,.2f}" if p >= 100 else f"{p:.6g}"
 
@@ -279,9 +302,26 @@ def main():
     parser.add_argument("--loop", action="store_true", help="run forever")
     parser.add_argument("--dry-run", action="store_true", help="print signals, send nothing")
     parser.add_argument("--test", action="store_true", help="send a test Telegram message")
+    parser.add_argument("--get-chat-id", action="store_true",
+                        help="list chat_ids that messaged the bot (needs TG_TOKEN)")
     args = parser.parse_args()
 
     load_env()
+
+    if args.get_chat_id:
+        token = os.environ.get("TG_TOKEN")
+        if not token:
+            sys.exit("TG_TOKEN missing. Put it in .env or run: TG_TOKEN=... python3 bot.py --get-chat-id")
+        try:
+            chats = get_chat_ids(token)
+        except Exception as e:
+            sys.exit(str(e))
+        if not chats:
+            sys.exit("No messages found. Send any message to your bot in Telegram, then run this again.")
+        for chat_id, name in chats.items():
+            print(f"{chat_id}\t{name}")
+        return
+
     config = load_json(CONFIG_PATH, None)
     if config is None:
         sys.exit(f"Missing or invalid {CONFIG_PATH}. Copy config.example.json to config.json.")

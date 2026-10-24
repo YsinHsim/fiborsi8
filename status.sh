@@ -1,4 +1,4 @@
-#!/data/data/com.termux/files/usr/bin/bash
+#!/usr/bin/env bash
 cd "$(dirname "$0")"
 
 if [ -f bot.pid ] && kill -0 "$(cat bot.pid)" 2>/dev/null; then
