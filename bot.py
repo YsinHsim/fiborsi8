@@ -347,9 +347,11 @@ def run_once(config, dry_run=False):
         and state.get("heartbeat_day") != today
     ):
         try:
+            dash = config.get("monitor_url", "").replace("/api/status", "")
             send_telegram(
                 f"✅ FiboRSI8 bot alive. Watching {len(config['symbols'])} pairs on "
                 f"{', '.join(config['timeframes'])}."
+                + (f"\nDashboard: {dash}" if dash else "")
             )
             state["heartbeat_day"] = today
         except Exception as e:

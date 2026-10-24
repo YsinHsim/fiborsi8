@@ -114,7 +114,11 @@ python3 bot.py --test       # send a Telegram test message
 python3 bot.py --get-chat-id  # list chat_ids that messaged the bot
 ```
 
-The bot sends a daily "alive" message at `heartbeat_hour` (default 08:00). If it stops arriving, the bot has stopped (on Android, usually the OS killed it).
+The bot sends a daily "alive" message at `heartbeat_hour` (default 08:00), with the dashboard link if monitoring is configured. If it stops arriving, the bot has stopped (on Android, usually the OS killed it).
+
+### Web dashboard
+
+With `monitor_url` and `monitor_secret` set in `config.json`, the bot reports its status to a web dashboard after every cycle. See [fiborsi8-monitor](https://github.com/YsinHsim/fiborsi8-monitor) for setup. `./status.sh` prints the dashboard link when configured.
 
 ## Configuration
 
