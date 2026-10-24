@@ -1,0 +1,15 @@
+{
+  "symbols": ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT"],
+  "timeframes": ["15m", "1h", "4h"],
+  "interval_minutes": 5,
+  "heartbeat_hour": 8,
+  "strategy": {
+    "rsi_period": 8,
+    "oversold": 30,
+    "overbought": 70,
+    "fib_level": 0.618,
+    "swing_lookback": 50,
+    "trend_sma": 50,
+    "touch_window": 3
+  }
+}

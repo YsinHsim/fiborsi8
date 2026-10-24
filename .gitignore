@@ -1,0 +1,7 @@
+.env
+config.json
+state.json
+state.json.tmp
+bot.log
+__pycache__/
+bot.pid
