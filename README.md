@@ -106,10 +106,10 @@ No auto-start on macOS. Run `./start.sh` after a reboot, and the bot only runs w
 ./start.sh                  # start in background (auto-restarts on crash)
 ./stop.sh                   # stop
 ./status.sh                 # running? + last log lines
+./update.sh                 # pull the latest version, smoke test, restart
 python3 bot.py --dry-run    # check once, print signals, send nothing
 python3 bot.py --test       # send a Telegram test message
 python3 bot.py --get-chat-id  # list chat_ids that messaged the bot
-git pull && ./stop.sh && ./start.sh   # update to the latest version
 ```
 
 The bot sends a daily "alive" message at `heartbeat_hour` (default 08:00). If it stops arriving, the bot has stopped (on Android, usually the OS killed it).

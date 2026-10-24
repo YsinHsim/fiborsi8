@@ -342,8 +342,12 @@ def main():
             run_once(config, dry_run=args.dry_run)
         except Exception as e:
             log(f"run error: {e}")
-        # sleep to the next interval boundary, plus a few seconds so the candle has closed
-        time.sleep(interval - (time.time() % interval) + 5)
+        # Sleep until 5s after the next interval boundary (so the candle has
+        # closed). Sleep in short chunks: on Android, doze can stretch one
+        # long sleep far past the boundary and skip a whole cycle.
+        deadline = time.time() + interval - (time.time() % interval) + 5
+        while time.time() < deadline:
+            time.sleep(min(60, deadline - time.time()))
 
 
 if __name__ == "__main__":
